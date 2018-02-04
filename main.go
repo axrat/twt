@@ -14,6 +14,7 @@ import (
 	"strconv"
 	"io/ioutil"
 	"github.com/urfave/cli"
+	"time"
 )
 type Client struct {
 	TWITTER_CONSUMER_KEY        string
@@ -60,6 +61,11 @@ func main() {
 			Usage:   "引数でツイート",
 			Action:  tweetAction,
 		},
+		{
+			Name:    "test",
+			Usage:   "テスト",
+			Action:  testAction,
+		},
 	}
 	app.Before = func(c *cli.Context) error {
 		setup()
@@ -71,6 +77,44 @@ func main() {
 	}
 	app.Run(os.Args)
 }
+func getApi()(*anaconda.TwitterApi){
+	anaconda.SetConsumerKey(client.TWITTER_CONSUMER_KEY)
+	anaconda.SetConsumerSecret(client.TWITTER_CONSUMER_SECRET)
+	api := anaconda.NewTwitterApi(client.TWITTER_ACCESS_TOKEN, client.TWITTER_ACCESS_TOKEN_SECRET)
+	api.SetLogger(anaconda.BasicLogger)
+	return api
+}
+func testAction(c *cli.Context) {
+	goz.Echo("TestAction")
+}
+func addQuery(base string,q string)(string){
+	return base+" "+q
+}
+func createSinceUntilStr(year int,month int)(string){
+	return fmt.Sprintf("since:%04d-%02d-%02d until:%04d-%02d-%02d",
+		year,month,01,year,month,getLastDay(year,month))
+}
+func getLastDay(year int,month int)(lastDay int){
+	loc, err := time.LoadLocation("Asia/Tokyo")
+	if err != nil {
+		panic(err)
+	}
+	return time.Date(year, time.Month(month+1), 1, 0, 0, 0, 0, loc).
+		AddDate(0, 0, -1).Day()
+}
+func TweetSearch(){
+	api := getApi()
+	var q string = "from:onoie3"
+	q=addQuery(q,createSinceUntilStr(2018,1))
+	//q=addQuery(q,"filter:images")
+	searchResult, err := api.GetSearch(q, nil)
+	if err != nil{
+		panic(err)
+	}
+	for no, tweet := range searchResult.Statuses {
+		fmt.Println(no,tweet.FullText)
+	}
+}
 func tweetAction(c *cli.Context) {
 	var isDebug = c.GlobalBool("debug")
 	if isDebug {
@@ -78,20 +122,17 @@ func tweetAction(c *cli.Context) {
 		fmt.Println("TWITTER_CONSUMER_SECRET:", client.TWITTER_CONSUMER_SECRET)
 		fmt.Println("TWITTER_ACCESS_TOKEN:", client.TWITTER_ACCESS_TOKEN)
 		fmt.Println("TWITTER_ACCESS_TOKEN_SECRET:", client.TWITTER_ACCESS_TOKEN_SECRET)
-	}
-	if len(c.Args()) > 0 {
-		anaconda.SetConsumerKey(client.TWITTER_CONSUMER_KEY)
-		anaconda.SetConsumerSecret(client.TWITTER_CONSUMER_SECRET)
-		api := anaconda.NewTwitterApi(client.TWITTER_ACCESS_TOKEN, client.TWITTER_ACCESS_TOKEN_SECRET)
-		api.SetLogger(anaconda.BasicLogger)
-		var twtstr string
-		for i := range c.Args() {
-			twtstr+=" "+c.Args().Get(i)
-		}
-		fmt.Println(twtstr)
-		Tweet(api,twtstr)
 	}else{
-		fmt.Println("require tweet string")
+		if len(c.Args()) > 0 {
+			var twtstr string
+			for i := range c.Args() {
+				twtstr+=" "+c.Args().Get(i)
+			}
+			fmt.Println(twtstr)
+			Tweet(getApi(),twtstr)
+		}else{
+			fmt.Println("require tweet string")
+		}
 	}
 }
 func fixOnoie3(api *anaconda.TwitterApi){

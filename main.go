@@ -23,7 +23,7 @@ type Client struct {
 }
 var client Client
 func setup(){
-	err := godotenv.Load()
+	err := godotenv.Overload()
 	if err != nil {
 		log.Fatal("Error loading .env file")
 	}

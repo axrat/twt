@@ -1,5 +1,5 @@
 # twt
-twitter cli
+for twitter
 ## dep
 * github.com/TransAssist/goz
 * github.com/joho/godotenv

@@ -1,4 +1,6 @@
+twt
 .env
+tweets.csv
 
 # Binaries for programs and plugins
 *.exe

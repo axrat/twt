@@ -15,6 +15,8 @@ import (
 	"io/ioutil"
 	"github.com/urfave/cli"
 	"time"
+	"io"
+	"encoding/csv"
 )
 type Client struct {
 	TWITTER_CONSUMER_KEY        string
@@ -86,6 +88,65 @@ func getApi()(*anaconda.TwitterApi){
 }
 func testAction(c *cli.Context) {
 	goz.Echo("TestAction")
+	ReadTweetsCSV(1300,[]int64{869525354259521536, 959537183773175808})
+}
+func ReadTweetsCSV(ind int,skipids []int64){
+	slice := csvToSlices()
+	fmt.Println("columns:",len(slice[0]))
+	rows:=len(slice)
+	fmt.Println("rows:",rows)
+	fmt.Println(slice[0])
+	//[tweet_id in_reply_to_status_id in_reply_to_user_id timestamp source text retweeted_status_id retweeted_status_user_id retweeted_status_timestamp expanded_urls]
+	for i := 1+ind; i < len(slice); i++ {
+		//for api rate 15min / 900
+		time.Sleep(1 * time.Second + 5 * time.Microsecond)
+
+		s:=slice[i]
+		tweet_id, _ := strconv.Atoi(s[0])
+		timestamp:=s[3]
+		skip:=false
+		for _, id := range skipids {
+			if id == int64(tweet_id){
+				skip=true
+			}
+		}
+		if !skip {
+			tweet, err := getApi().GetTweet(int64(tweet_id),nil)
+			if err == nil {
+				if noMedia(tweet){
+					TweetRemove(getApi(),int64(tweet_id))
+				}
+			}else{
+				fmt.Println("ERROR")
+			}
+		}
+		fmt.Println("No.", i, "/",rows,tweet_id ,timestamp,"SKIP",skip)
+	}
+}
+func csvToSlices()([][]string){
+	bulkCount := 100
+	file, _ := os.Open("./tweets.csv")
+	defer file.Close()
+	reader := csv.NewReader(file)
+	//header, _ := reader.Read()
+	lines := make([][]string, 0, bulkCount)
+	for {
+		isLast := false
+		for i := 0; i < bulkCount; i++ {
+			line, err := reader.Read()
+			if err == io.EOF {
+				isLast = true
+				break
+			} else if err != nil {
+				panic(err)
+			}
+			lines = append(lines, line)
+		}
+		if isLast {
+			break
+		}
+	}
+	return lines
 }
 func addQuery(base string,q string)(string){
 	return base+" "+q
@@ -163,17 +224,24 @@ func RemoveNotMediaTweet(api *anaconda.TwitterApi,v url.Values, skipId int64)(in
 		last=tweet.Id
 		fmt.Print(tweet.Id," No.",index+1)
 		if skipId != tweet.Id {
-			entities := tweet.Entities
-			entirymedia := entities.Media
-			if entirymedia == nil {
+			if noMedia(tweet){
 				fmt.Println(" = None")
 				TweetRemove(api,tweet.Id)
-			}else {
-				fmt.Println(" =",entities.Media[0].Id)
+			}else{
+				fmt.Println(" =",tweet.Entities.Media[0].Id)
 			}
 		}
 	}
 	return last
+}
+func noMedia(tweet anaconda.Tweet)(bool){
+	entities := tweet.Entities
+	entirymedia := entities.Media
+	if entirymedia == nil {
+		return true
+	}else {
+		return false
+	}
 }
 func GetUserTimeline(api *anaconda.TwitterApi,screen_name string){
 	v:=url.Values{}

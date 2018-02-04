@@ -3,6 +3,7 @@
     <module name="twt" />
     <working_directory value="$PROJECT_DIR$/" />
     <go_parameters value="-i" />
+    <parameters value="-d" />
     <kind value="FILE" />
     <filePath value="$PROJECT_DIR$/main.go" />
     <package value="github.com/axrat/twt" />

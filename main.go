@@ -88,7 +88,8 @@ func getApi()(*anaconda.TwitterApi){
 }
 func testAction(c *cli.Context) {
 	goz.Echo("TestAction")
-	FixOnoieTweet()
+	//FixOnoieTweet()
+	//RemoveTweetFromCSV()
 }
 func getExpId()( []int64){
 	return []int64{

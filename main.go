@@ -88,7 +88,16 @@ func getApi()(*anaconda.TwitterApi){
 }
 func testAction(c *cli.Context) {
 	goz.Echo("TestAction")
-	ReadTweetsCSV(1300,[]int64{869525354259521536, 959537183773175808})
+	FixOnoieTweet()
+}
+func getExpId()( []int64){
+	return []int64{
+		869525354259521536, //pin
+		959537183773175808, //work
+		}
+}
+func RemoveTweetFromCSV(){
+	ReadTweetsCSV(0,getExpId())
 }
 func ReadTweetsCSV(ind int,skipids []int64){
 	slice := csvToSlices()
@@ -196,11 +205,10 @@ func tweetAction(c *cli.Context) {
 		}
 	}
 }
-func fixOnoie3(api *anaconda.TwitterApi){
+func FixOnoieTweet(){
 	v := createValues("onoie3")
 	//addMaxId(v,"")
-	var pin_tweet int64 = 869525354259521536
-	lastid:=RemoveNotMediaTweet(api,v,pin_tweet)
+	lastid:= removeNotMediaTweet(getApi(),v,getExpId())
 	fmt.Println("LastTweetId:",lastid)
 }
 func createValues(screen_name string)(url.Values){
@@ -212,7 +220,7 @@ func addMaxId(v url.Values,maxid string)(url.Values){
 	v.Set("max_id",maxid)
 	return v
 }
-func RemoveNotMediaTweet(api *anaconda.TwitterApi,v url.Values, skipId int64)(int64){
+func removeNotMediaTweet(api *anaconda.TwitterApi,v url.Values, skipId []int64)(int64){
 	v.Set("include_rts", "true")
 	v.Set("count", "200")
 	tweets, err := api.GetUserTimeline(v)
@@ -223,7 +231,15 @@ func RemoveNotMediaTweet(api *anaconda.TwitterApi,v url.Values, skipId int64)(in
 	for index, tweet := range tweets {
 		last=tweet.Id
 		fmt.Print(tweet.Id," No.",index+1)
-		if skipId != tweet.Id {
+		skip:=false
+		for _, id := range skipId {
+			if id == tweet.Id{
+				skip=true
+			}
+		}
+		if skip {
+			fmt.Println("=>SkipID")
+		}else{
 			if noMedia(tweet){
 				fmt.Println(" = None")
 				TweetRemove(api,tweet.Id)
